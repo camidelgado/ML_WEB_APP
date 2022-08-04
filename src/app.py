@@ -1,36 +1,27 @@
-from utils import db_connect
-engine = db_connect()
-
-# your code here
-import pandas as pd
 import numpy as np
-import seaborn as sns
-import matplotlib.pyplot as plt
-import plotly.express as px
-import folium
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.model_selection import train_test_split
-from sklearn import metrics
-from sklearn.model_selection import RandomizedSearchCV
+from flask import Flask, request, render_template
+import pickle
 
-url='https://raw.githubusercontent.com/4GeeksAcademy/random-forest-project-tutorial/main/titanic_train.csv'
-df=pd.read_csv(url, sep=',')
-df=df.drop(columns=['Name'])
-df['Sex'].value_counts()
-df['Sex']=df['Sex'].map({'male':1,'female':0})
+app = Flask(__name__)
+model = pickle.load(open('/workspace/random_forest/models/modelo_final.pickle', 'rb'))
 
-df=df.drop(columns=['Ticket'])
-df=df.drop(columns=['Cabin'])
-df['Embarked']=df['Embarked'].map({'S':2,'C':1,'Q':0})
+@app.route('/') #http://www.google.com/
+def home():
+    return render_template('index.html')
 
-df['Age'][np.isnan(df['Age'])]=df['Age'].mean()
-df['Embarked'][np.isnan(df['Embarked'])]=2
-X=df.drop(columns=['Survived'])
-y=df['Survived']
-X_train,X_test,y_train,y_test=train_test_split(X,y,random_state=520, test_size=0.2)
 
-modelo_final=RandomForestClassifier(n_estimators= 333, min_samples_split= 10,min_samples_leaf=1,max_depth= 20,criterion='gini',
-bootstrap= True)
-modelo_final.fit(X_train, y_train)
-y_train_final=modelo_final.predict(X_train)
-y_test_final=modelo_final.predict(X_test)
+@app.route('/predict', methods=['POST'])
+def predict():
+    '''
+    For rendering results on HTML GUI
+    '''
+    int_features = [int(x) for x in request.form.values()]
+    final_features = [np.array(int_features)]
+    prediction = model.predict(final_features)
+
+    output = round(prediction[0], 2)
+
+    return render_template('index.html', prediction_text='Would you survive? {} (1=survived, 0=deceased)'.format(output))
+
+if __name__=="__main__":
+    app.run(port=5000, debug=True)
